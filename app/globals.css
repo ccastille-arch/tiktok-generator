@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #080d08;
+  --surface: #0f1a0f;
+  --card: #162216;
+  --border: #1e3a1e;
+  --accent: #22c55e;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg);
+  color: #f0faf0;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(22, 34, 22, 0.8);
+  border: 1px solid rgba(30, 58, 30, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+}
+
+.glow-green-strong {
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
+}
+
+/* TikTok phone mockup */
+.phone-frame {
+  aspect-ratio: 9/16;
+  background: #000;
+  border-radius: 24px;
+  border: 3px solid #1e3a1e;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Animated gradient background */
+.hero-gradient {
+  background: radial-gradient(ellipse at 20% 50%, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(245, 158, 11, 0.05) 0%, transparent 50%),
+              var(--bg);
+}
+
+/* Tag pill */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tag-safe {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.tag-safe:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+}
+
+.tag-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.tag-selected {
+  background: rgba(34, 197, 94, 0.25);
+  border: 1px solid #22c55e;
+  color: #22c55e;
+}
+
+.tag-trending {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+/* Pulse animation for "live" indicators */
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse-green { animation: pulse-green 2s ease-in-out infinite; }
+
+/* Loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(34, 197, 94, 0.1) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Caption textarea */
+.caption-textarea {
+  background: rgba(8, 13, 8, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #f0faf0;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.caption-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+/* Score badge */
+.score-badge {
+  font-family: 'Impact', 'Arial Black', sans-serif;
+  font-size: 3rem;
+  color: #f59e0b;
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.5), 2px 2px 0 rgba(0,0,0,0.8);
+  line-height: 1;
+}
+
+/* Tab active indicator */
+.tab-active {
+  color: #22c55e;
+  border-bottom: 2px solid #22c55e;
+}
+
+/* Stat card */
+.stat-card {
+  background: rgba(22, 34, 22, 0.6);
+  border: 1px solid rgba(30, 58, 30, 0.5);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+/* Button styles */
+.btn-primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: rgba(30, 58, 30, 0.5);
+  color: #86a986;
+  border: 1px solid rgba(30, 58, 30, 0.8);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(30, 58, 30, 0.8);
+  color: #f0faf0;
+  border-color: #22c55e;
+}
