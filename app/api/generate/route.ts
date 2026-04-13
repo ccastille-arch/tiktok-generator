@@ -25,8 +25,8 @@ RULES:
 - Lead with age ("11 years old") when it's impressive
 - Humble, work-ethic energy — NOT "look how good I am"
 - NEVER use: bowhunt, bowhunting, hunting, deerhunting, huntinglife, bowhunter, huntin (TikTok flags these)
-- ALWAYS include: #A3archery #hoytarchery #mathewsarchery
-- Safe additions: #3darchery #asaarchery #archerylife #youtharchery #futureproshooter #youngathlete #archeryjourney #targetarchery #competitivearchery`
+- MAX 5 HASHTAGS PER POST — TikTok only allows 5, no exceptions
+- Always pick the 5 most relevant from: #A3archery #hoytarchery #mathewsarchery #3darchery #asaarchery #archerylife #youtharchery #futureproshooter #youngathlete #archeryjourney #targetarchery #competitivearchery`
 
 export async function POST(req: NextRequest) {
   try {
@@ -105,13 +105,12 @@ Respond with ONLY valid JSON, no markdown, no explanation:
 
   const parsed = JSON.parse(jsonMatch[0])
 
-  // Sanitize: remove any blacklisted hashtags that slipped through
+  // Sanitize: remove blacklisted hashtags, hard cap at 5
   for (const post of parsed.posts ?? []) {
     if (Array.isArray(post.hashtags)) {
-      post.hashtags = post.hashtags.filter((tag: string) => {
-        const clean = tag.replace(/^#/, '').toLowerCase()
-        return !BLACKLISTED_HASHTAGS.has(clean)
-      })
+      post.hashtags = post.hashtags
+        .filter((tag: string) => !BLACKLISTED_HASHTAGS.has(tag.replace(/^#/, '').toLowerCase()))
+        .slice(0, 5)
     }
     // Clamp mediaIndices to valid range
     if (Array.isArray(post.mediaIndices)) {

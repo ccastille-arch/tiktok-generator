@@ -234,7 +234,9 @@ export default function Step3Results({ files, posts, onReset, onBack }: Props) {
 
                 {/* Hashtags */}
                 <div>
-                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Hashtags</p>
+                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                    Hashtags <span className="text-text-muted normal-case font-normal">({post.hashtags.length}/5 max)</span>
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {post.hashtags.map(tag => (
                       <span key={tag} className="tag-pill tag-safe">{tag}</span>
