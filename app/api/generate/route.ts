@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleBatch(body: {
-  files: { i: number; name: string; kind: string }[]
+  files: { i: number; kind: string }[]
   postCount: number
   tournament?: string
   scores?: string
@@ -54,23 +54,22 @@ async function handleBatch(body: {
 }) {
   const { files, postCount, tournament, scores, notes } = body
 
-  const fileList = files
-    .map(f => `  [${f.i}] ${f.name} (${f.kind})`)
-    .join('\n')
+  // Compact file list: just indices and types (no filenames needed)
+  const imageIndices = files.filter(f => f.kind === 'image').map(f => f.i)
+  const videoIndices = files.filter(f => f.kind === 'video').map(f => f.i)
 
-  const prompt = `You are planning ${postCount} TikTok posts from ${files.length} media files from a competition/practice day.
-
-FILES AVAILABLE:
-${fileList}
-${tournament ? `\nEvent: ${tournament}` : ''}
-${scores ? `Scores/Results: ${scores}` : ''}
+  const prompt = `Plan ${postCount} TikTok posts from ${files.length} files (${imageIndices.length} photos, ${videoIndices.length} videos).
+Photos: [${imageIndices.join(',')}]
+Videos: [${videoIndices.join(',')}]
+${tournament ? `Event: ${tournament}` : ''}
+${scores ? `Scores: ${scores}` : ''}
 ${notes ? `Notes: ${notes}` : ''}
 
-TASK: Create ${postCount} distinct TikTok post plans. Distribute the ${files.length} files across the posts intelligently:
-- Videos are great as the first file in a post (TikTok plays first file as the main clip)
-- Group related files together when you can infer from filenames (sequential numbers = same moment)
-- Each post should have 2–6 files. Don't leave any file unused if possible.
-- Make each post feel different (practice vibe, score reveal, competition day, gear, family, etc.)
+Rules:
+- Put a video index first in mediaIndices when available (TikTok plays first file as main clip)
+- Each post: 2–6 files, spread media evenly, no index used twice
+- Make each post feel different (practice, score reveal, competition day, gear, family, milestone)
+- Use all files if possible
 
 Respond with ONLY valid JSON, no markdown, no explanation:
 {

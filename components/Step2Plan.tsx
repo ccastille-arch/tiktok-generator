@@ -22,9 +22,9 @@ export default function Step2Plan({ files, onBack, onGenerated }: Props) {
   const generate = async () => {
     setLoading(true)
     try {
+      // Send only index + kind — Claude doesn't need filenames, keeps payload small & fast
       const fileMeta = files.map((f, i) => ({
         i,
-        name: f.file.name,
         kind: f.kind,
       }))
 

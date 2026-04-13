@@ -12,7 +12,8 @@ interface Props {
 }
 
 export default function Step1Upload({ files, setFiles, onNext }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const addFiles = useCallback((accepted: File[]) => {
     if (!accepted.length) return
@@ -39,8 +40,9 @@ export default function Step1Upload({ files, setFiles, onNext }: Props) {
   })
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    addFiles(Array.from(e.target.files || []))
-    e.target.value = ''
+    const picked = Array.from(e.target.files || [])
+    if (picked.length) addFiles(picked)
+    e.target.value = '' // reset so same files can be re-selected
   }
 
   const removeFile = (id: string) => {
@@ -70,30 +72,32 @@ export default function Step1Upload({ files, setFiles, onNext }: Props) {
         `}
       >
         <input {...getInputProps()} />
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept="image/*,video/*"
-          className="sr-only"
-          onChange={onPick}
-        />
+        {/* Separate inputs per type — required for reliable iOS onChange */}
+        <input ref={photoInputRef} type="file" multiple accept="image/*" className="sr-only" onChange={onPick} />
+        <input ref={videoInputRef} type="file" multiple accept="video/*" className="sr-only" onChange={onPick} />
 
         {files.length === 0 ? (
           /* Empty state */
-          <div className="p-12 text-center">
+          <div className="p-10 text-center">
             <div className="text-6xl mb-4">📸</div>
             <h2 className="text-xl font-bold text-text-primary mb-2">Dump your competition photos & videos here</h2>
             <p className="text-text-muted text-sm mb-6">
-              Select your whole camera roll from today — photos, videos, everything.<br/>
-              AI will sort it all into posts for you.
+              Select your whole camera roll from today — AI will sort it all into posts for you.
             </p>
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="btn-primary px-10 py-4 text-lg mx-auto block"
-            >
-              Choose Photos & Videos
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                className="btn-primary px-8 py-4 text-base flex items-center gap-2"
+              >
+                📸 Add Photos
+              </button>
+              <button
+                onClick={() => videoInputRef.current?.click()}
+                className="btn-secondary px-8 py-4 text-base flex items-center gap-2"
+              >
+                🎬 Add Videos
+              </button>
+            </div>
             <p className="text-text-muted text-xs mt-4">JPG · PNG · MP4 · MOV — up to 500MB each</p>
           </div>
         ) : (
@@ -119,10 +123,16 @@ export default function Step1Upload({ files, setFiles, onNext }: Props) {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => inputRef.current?.click()}
+                  onClick={() => photoInputRef.current?.click()}
                   className="btn-secondary text-xs px-3 py-1.5"
                 >
-                  + Add more
+                  📸 Photos
+                </button>
+                <button
+                  onClick={() => videoInputRef.current?.click()}
+                  className="btn-secondary text-xs px-3 py-1.5"
+                >
+                  🎬 Videos
                 </button>
                 <button onClick={clearAll} className="text-xs text-text-muted hover:text-danger transition-colors px-2">
                   Clear all
