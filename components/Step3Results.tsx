@@ -7,6 +7,7 @@ import { MediaFile, GeneratedPost } from '@/app/page'
 interface Props {
   files: MediaFile[]
   posts: GeneratedPost[]
+  expectedCount: number
   onReset: () => void
   onBack: () => void
 }
@@ -28,7 +29,8 @@ function fmt(d: Date) {
   return d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function Step3Results({ files, posts, onReset, onBack }: Props) {
+export default function Step3Results({ files, posts, expectedCount, onReset, onBack }: Props) {
+  const loadingCount = Math.max(0, expectedCount - posts.length)
   const [copied, setCopied] = useState<Record<number, boolean>>({})
   const [expanded, setExpanded] = useState<number>(0)
   const [gapHours, setGapHours] = useState(24)
@@ -76,7 +78,12 @@ export default function Step3Results({ files, posts, onReset, onBack }: Props) {
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-text-primary">{posts.length} Posts Ready 🎬</h2>
+          <h2 className="text-lg font-bold text-text-primary">
+            {loadingCount > 0
+              ? <><span className="text-accent">{posts.length}</span> of {expectedCount} ready… <span className="inline-block w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin ml-1 align-middle" /></>
+              : <>{posts.length} Posts Ready 🎬</>
+            }
+          </h2>
           <p className="text-text-muted text-xs">Tap a post to expand · Copy caption &amp; hashtags · Upload files to TikTok</p>
         </div>
         <div className="flex gap-2">
@@ -272,6 +279,23 @@ export default function Step3Results({ files, posts, onReset, onBack }: Props) {
           </div>
         )
       })}
+
+      {/* Skeleton cards for posts still generating */}
+      {Array.from({ length: loadingCount }, (_, i) => (
+        <div key={`skeleton-${i}`} className="glass-card p-4 shimmer">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-border/50 flex-shrink-0" />
+            <div className="flex gap-1">
+              {[1,2,3].map(n => <div key={n} className="w-8 h-8 rounded-md bg-border/50" />)}
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="h-3 bg-border/50 rounded w-32" />
+              <div className="h-2 bg-border/30 rounded w-48" />
+            </div>
+            <div className="text-xs text-text-muted">Generating…</div>
+          </div>
+        </div>
+      ))}
 
       {/* TikTok direct post callout */}
       <div className="glass-card p-5 border-gold/20">

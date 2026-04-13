@@ -31,8 +31,24 @@ export default function Home() {
   const [step, setStep] = useState<Step>(1)
   const [files, setFiles] = useState<MediaFile[]>([])
   const [posts, setPosts] = useState<GeneratedPost[]>([])
+  const [expectedCount, setExpectedCount] = useState(0)
 
-  const goTo = (s: Step) => setStep(s)
+  const handleStreamStart = (count: number) => {
+    setExpectedCount(count)
+    setPosts([])
+    setStep(3) // go to results immediately — posts will stream in
+  }
+
+  const handlePostReady = (post: GeneratedPost) => {
+    setPosts(prev => {
+      const without = prev.filter(p => p.postNumber !== post.postNumber)
+      return [...without, post].sort((a, b) => a.postNumber - b.postNumber)
+    })
+  }
+
+  const handleAllDone = (allPosts: GeneratedPost[]) => {
+    setPosts(allPosts.sort((a, b) => a.postNumber - b.postNumber))
+  }
 
   return (
     <div className="hero-gradient min-h-screen">
@@ -67,25 +83,24 @@ export default function Home() {
 
       <div className="max-w-3xl mx-auto px-4 pb-20 pt-4">
         {step === 1 && (
-          <Step1Upload
-            files={files}
-            setFiles={setFiles}
-            onNext={() => goTo(2)}
-          />
+          <Step1Upload files={files} setFiles={setFiles} onNext={() => setStep(2)} />
         )}
         {step === 2 && (
           <Step2Plan
             files={files}
-            onBack={() => goTo(1)}
-            onGenerated={(p) => { setPosts(p); goTo(3) }}
+            onBack={() => setStep(1)}
+            onGenerated={handleAllDone}
+            onStreamStart={handleStreamStart}
+            onPostReady={handlePostReady}
           />
         )}
         {step === 3 && (
           <Step3Results
             files={files}
             posts={posts}
-            onReset={() => { setFiles([]); setPosts([]); goTo(1) }}
-            onBack={() => goTo(2)}
+            expectedCount={expectedCount}
+            onReset={() => { setFiles([]); setPosts([]); setExpectedCount(0); setStep(1) }}
+            onBack={() => setStep(2)}
           />
         )}
       </div>

@@ -8,52 +8,83 @@ interface Props {
   files: MediaFile[]
   onBack: () => void
   onGenerated: (posts: GeneratedPost[]) => void
+  onStreamStart: (postCount: number) => void
+  onPostReady: (post: GeneratedPost) => void
 }
 
-export default function Step2Plan({ files, onBack, onGenerated }: Props) {
+export default function Step2Plan({ files, onBack, onGenerated, onStreamStart, onPostReady }: Props) {
   const [postCount, setPostCount] = useState(3)
   const [tournament, setTournament] = useState('')
   const [scores, setScores] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   const maxPosts = Math.min(10, files.length)
 
   const generate = async () => {
     setLoading(true)
+    setProgress(0)
+    const collected: GeneratedPost[] = []
+
     try {
-      // Send only index + kind — Claude doesn't need filenames, keeps payload small & fast
-      const fileMeta = files.map((f, i) => ({
-        i,
-        kind: f.kind,
-      }))
+      const fileMeta = files.map((f, i) => ({ i, kind: f.kind }))
 
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'batch',
-          files: fileMeta,
-          postCount,
-          tournament,
-          scores,
-          notes,
-        }),
+        body: JSON.stringify({ mode: 'batch', files: fileMeta, postCount, tournament, scores, notes }),
       })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'Generation failed')
-      onGenerated(data.posts)
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`)
+      if (!res.body) throw new Error('No response body')
+
+      // Signal parent: go to Step3 immediately in loading state
+      onStreamStart(postCount)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const data = JSON.parse(line)
+            if (data.post) {
+              collected.push(data.post as GeneratedPost)
+              setProgress(collected.length)
+              onPostReady(data.post as GeneratedPost)
+            }
+            if (data.error) {
+              console.warn('Stream error:', data.error)
+            }
+            if (data.done) {
+              onGenerated(collected)
+            }
+          } catch {
+            // malformed line, skip
+          }
+        }
+      }
+
+      if (collected.length === 0) throw new Error('No posts generated')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.error(`Failed: ${msg}`)
-    } finally {
       setLoading(false)
     }
   }
 
   return (
     <div className="space-y-5">
-      {/* Back link */}
       <button onClick={onBack} className="text-sm text-text-muted hover:text-text-primary transition-colors flex items-center gap-1">
         ← Back ({files.length} files)
       </button>
@@ -62,10 +93,9 @@ export default function Step2Plan({ files, onBack, onGenerated }: Props) {
       <div className="glass-card p-6">
         <h2 className="text-lg font-bold text-text-primary mb-1">How many TikTok posts?</h2>
         <p className="text-text-muted text-sm mb-5">
-          AI will split your {files.length} files across {postCount} post{postCount > 1 ? 's' : ''} — captions, hashtags, media order, all of it.
+          AI splits your {files.length} files across {postCount} post{postCount > 1 ? 's' : ''} — captions, hashtags, media order, all of it.
         </p>
 
-        {/* Count grid */}
         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 mb-4">
           {Array.from({ length: maxPosts }, (_, i) => i + 1).map(n => (
             <button
@@ -84,7 +114,6 @@ export default function Step2Plan({ files, onBack, onGenerated }: Props) {
           ))}
         </div>
 
-        {/* Media per post indicator */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-bg border border-border">
           <div className="text-accent text-xl">🎬</div>
           <div>
@@ -98,11 +127,11 @@ export default function Step2Plan({ files, onBack, onGenerated }: Props) {
         </div>
       </div>
 
-      {/* Optional context */}
+      {/* Context */}
       <div className="glass-card p-5 space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary mb-0.5">Add context <span className="text-text-muted font-normal">(optional but makes captions way better)</span></h3>
-        </div>
+        <h3 className="text-sm font-semibold text-text-primary mb-0.5">
+          Add context <span className="text-text-muted font-normal">(optional but makes captions way better)</span>
+        </h3>
 
         <div>
           <label className="text-xs text-text-muted mb-1 block">Tournament / Event</label>
@@ -125,18 +154,18 @@ export default function Step2Plan({ files, onBack, onGenerated }: Props) {
         </div>
 
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Anything else to know?</label>
+          <label className="text-xs text-text-muted mb-1 block">Anything else?</label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="e.g. dad was scoring today, tried a new bow, early morning practice..."
+            placeholder="e.g. dad was scoring, tried new bow, early morning practice..."
             rows={2}
             className="caption-textarea w-full px-3 py-2 text-sm"
           />
         </div>
       </div>
 
-      {/* Generate button */}
+      {/* Generate */}
       <button
         onClick={generate}
         disabled={loading}
@@ -145,21 +174,12 @@ export default function Step2Plan({ files, onBack, onGenerated }: Props) {
         {loading ? (
           <>
             <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            <span>AI is building your {postCount} posts…</span>
+            <span>Building posts… {progress > 0 ? `(${progress}/${postCount} ready)` : ''}</span>
           </>
         ) : (
-          <>
-            <span>✨</span>
-            <span>Generate {postCount} TikTok Post{postCount > 1 ? 's' : ''}</span>
-          </>
+          <>✨ Generate {postCount} TikTok Post{postCount > 1 ? 's' : ''}</>
         )}
       </button>
-
-      {loading && (
-        <p className="text-center text-xs text-text-muted animate-pulse">
-          Analyzing your {files.length} files and writing captions in Brayden's voice…
-        </p>
-      )}
     </div>
   )
 }
