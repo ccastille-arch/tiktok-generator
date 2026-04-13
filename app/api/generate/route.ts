@@ -1,96 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { BLACKLISTED_HASHTAGS, SAFE_HASHTAGS, TRENDING_HASHTAGS } from '@/lib/constants'
+import { BLACKLISTED_HASHTAGS } from '@/lib/constants'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+const SYSTEM = `You write TikTok content for @braydens.archery — Brayden Castille, 11-year-old competitive archer. State Record Holder, State Champion, Shooter of the Year. Shoots TRX34, A3 Staff, Eagle Pins class.
+
+VOICE — match these real captions exactly:
+• "11 year Old Future Pro Shooter"
+• "11 years old with Pro Shooter Dreams"
+• "180 arrows after school on a Tuesday"
+• "Tuesday Afterschool Range Time"
+• "Friday Practice!"
+• "New Toy!!"
+• "Dad's Scores — Cuts me no slack"
+• "11 Years Old 270 with 8-12 rings"
+• "Nailed 12 Ring!"
+• "Road to ASA Pro"
+
+RULES:
+- Short. 1 sentence, maybe 2. Let footage speak.
+- Lead with age ("11 years old") when it's impressive
+- Humble, work-ethic energy — NOT "look how good I am"
+- NEVER use: bowhunt, bowhunting, hunting, deerhunting, huntinglife, bowhunter, huntin (TikTok flags these)
+- ALWAYS include: #A3archery #hoytarchery #mathewsarchery
+- Safe additions: #3darchery #asaarchery #archerylife #youtharchery #futureproshooter #youngathlete #archeryjourney #targetarchery #competitivearchery`
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { template, context, score, tournament, selectedHashtags } = body
 
-    const safeHashtagList = SAFE_HASHTAGS.slice(0, 20).join(', ')
-    const trendingList = TRENDING_HASHTAGS.join(', ')
+    if (body.mode === 'batch') {
+      return await handleBatch(body)
+    }
+    return NextResponse.json({ success: false, error: 'Unknown mode' }, { status: 400 })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Generate error:', msg)
+    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+  }
+}
 
-    const systemPrompt = `You are writing TikTok captions for @braydens.archery — Brayden Castille, an 11-year-old competitive archer. Think "proud dad documenting his son's journey," not a marketing agency. Real, raw, authentic.
+async function handleBatch(body: {
+  files: { i: number; name: string; kind: string }[]
+  postCount: number
+  tournament?: string
+  scores?: string
+  notes?: string
+}) {
+  const { files, postCount, tournament, scores, notes } = body
 
-BRAND VOICE (match this exactly):
-- Humble, work-ethic focused — "putting in the work," not "look how good I am"
-- Lead with age: "11 years old" is almost always the hook
-- SHORT. 1–2 sentences max. Let the footage speak.
-- Journey narrative: "chasing pro dreams," "road to ASA Pro," "future pro shooter"
-- Family angle works great — dad scoring, family support, friendly competition
-- Raw and unpolished tone, like a real parent filming their kid
+  const fileList = files
+    .map(f => `  [${f.i}] ${f.name} (${f.kind})`)
+    .join('\n')
 
-CAPTION EXAMPLES TO MATCH (use these as style guides):
-- "11 year Old Future Pro Shooter"
-- "11 years old with Pro Shooter Dreams"
-- "11 years old working on his own bow"
-- "180 arrows after school on a Tuesday"
-- "Tuesday Afterschool Range Time"
-- "Friday Practice!"
-- "New Toy!!"
-- "Dad's Scores — Cuts me no slack"
-- "11 Years Old 270 with 8-12 rings"
-- "Nailed 12 Ring!"
+  const prompt = `You are planning ${postCount} TikTok posts from ${files.length} media files from a competition/practice day.
 
-CRITICAL HASHTAG RULES:
-- NEVER use these (TikTok flags/removes them): bowhunt, bowhunting, hunting, deerhunting, huntinglife, bowhunter, huntin, bowhuntinglife, deerhunter, huntingseason
-- ALWAYS use: #A3archery #hoytarchery #mathewsarchery — these are Brayden's actual tags
-- Also safe: ${safeHashtagList}
-- Trending safe options: ${trendingList}
+FILES AVAILABLE:
+${fileList}
+${tournament ? `\nEvent: ${tournament}` : ''}
+${scores ? `Scores/Results: ${scores}` : ''}
+${notes ? `Notes: ${notes}` : ''}
 
-OUTPUT FORMAT (JSON only, no extra text):
+TASK: Create ${postCount} distinct TikTok post plans. Distribute the ${files.length} files across the posts intelligently:
+- Videos are great as the first file in a post (TikTok plays first file as the main clip)
+- Group related files together when you can infer from filenames (sequential numbers = same moment)
+- Each post should have 2–6 files. Don't leave any file unused if possible.
+- Make each post feel different (practice vibe, score reveal, competition day, gear, family, etc.)
+
+Respond with ONLY valid JSON, no markdown, no explanation:
 {
-  "captions": [
-    { "variation": "Short & Punchy", "text": "caption text here", "charCount": 45 },
-    { "variation": "Journey Angle", "text": "caption text here", "charCount": 70 },
-    { "variation": "Score/Detail", "text": "caption text here", "charCount": 60 }
-  ],
-  "hashtags": ["#A3archery", "#3darchery"],
-  "hook": "First-frame visual hook idea (what should viewer SEE in second 1)",
-  "sounds": ["Sound suggestion 1", "Sound suggestion 2"],
-  "tips": ["One real posting tip", "One content tip"]
+  "posts": [
+    {
+      "postNumber": 1,
+      "title": "Short internal title",
+      "mediaIndices": [0, 3, 7],
+      "caption": "Caption in Brayden's real voice — short, humble, age-forward",
+      "hashtags": ["#A3archery", "#hoytarchery", "#mathewsarchery", "#3darchery", "#archerylife"],
+      "hook": "What should be in the very first frame/second of this post",
+      "sound": "Suggested TikTok sound type or genre",
+      "postTime": "Best time to post this one",
+      "vibe": "practice|competition|score|gear|family|milestone"
+    }
+  ]
 }`
 
-    const userPrompt = `Template: ${template}
-${score ? `Score/Achievement: ${score}` : ''}
-${tournament ? `Tournament/Event: ${tournament}` : ''}
-${context ? `Additional context: ${context}` : ''}
-${selectedHashtags?.length ? `Already using: ${selectedHashtags.join(', ')}` : ''}
+  const message = await client.messages.create({
+    model: 'claude-opus-4-6',
+    max_tokens: 2500,
+    system: SYSTEM,
+    messages: [{ role: 'user', content: prompt }],
+  })
 
-Write 3 caption variations in Brayden's real voice — short, humble, kid-grinding-hard energy. Age (11) should appear naturally. Use 8–10 safe hashtags including #A3archery. NO hunting hashtags.`
+  const text = message.content[0].type === 'text' ? message.content[0].text : ''
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    })
+  // Extract JSON — handle both bare JSON and code fenced
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) {
+    console.error('No JSON in response:', text)
+    throw new Error('AI returned unexpected format')
+  }
 
-    const content = message.content[0]
-    if (content.type !== 'text') throw new Error('Unexpected response type')
+  const parsed = JSON.parse(jsonMatch[0])
 
-    // Parse JSON from response
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('Could not parse response')
-
-    const parsed = JSON.parse(jsonMatch[0])
-
-    // Validate hashtags — filter any that slipped through
-    if (parsed.hashtags) {
-      parsed.hashtags = parsed.hashtags.filter((tag: string) => {
-        const clean = tag.replace('#', '').toLowerCase()
+  // Sanitize: remove any blacklisted hashtags that slipped through
+  for (const post of parsed.posts ?? []) {
+    if (Array.isArray(post.hashtags)) {
+      post.hashtags = post.hashtags.filter((tag: string) => {
+        const clean = tag.replace(/^#/, '').toLowerCase()
         return !BLACKLISTED_HASHTAGS.has(clean)
       })
     }
-
-    return NextResponse.json({ success: true, ...parsed })
-  } catch (err: unknown) {
-    const error = err instanceof Error ? err : new Error(String(err))
-    console.error('Generate error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    // Clamp mediaIndices to valid range
+    if (Array.isArray(post.mediaIndices)) {
+      post.mediaIndices = post.mediaIndices.filter((i: number) => i >= 0 && i < files.length)
+    }
   }
+
+  return NextResponse.json({ success: true, ...parsed })
 }
