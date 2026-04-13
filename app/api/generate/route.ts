@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { BLACKLISTED_HASHTAGS } from '@/lib/constants'
 
+export const maxDuration = 60 // Vercel max for Pro plan
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
@@ -88,7 +90,7 @@ Respond with ONLY valid JSON, no markdown, no explanation:
 }`
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-6',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 2500,
     system: SYSTEM,
     messages: [{ role: 'user', content: prompt }],
